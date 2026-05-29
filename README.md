@@ -13,8 +13,8 @@ Progetto realizzato come esercitazione scolastica presso ITS Prodigi Pisa.
 ## Installazione
 
 ```bash
-git clone https://github.com/Barbagallo2296/laravel-todo-list.git
-cd laravel-todo-list
+git clone https://github.com/Barbagallo2296/laravel-todolist-api.git
+cd laravel-todolist-api
 composer install
 cp .env.example .env
 php artisan key:generate
