@@ -5,6 +5,107 @@ const getListsResult = document.getElementById('get-lists-result');
 
 let selectedListId = null;
 
+// Elementi del DOM per l'autenticazione
+const authSection = document.getElementById('auth-section');
+const appContent = document.getElementById('app-content');
+const userSection = document.getElementById('user-section');
+const userInfo = document.getElementById('user-info');
+
+// Switch schermate Login / Registrazione
+document.getElementById('show-login').addEventListener('click', () => {
+  document.getElementById('login-form').style.display = 'block';
+  document.getElementById('register-form').style.display = 'none';
+  document.getElementById('show-login').style.fontWeight = 'bold';
+  document.getElementById('show-register').style.fontWeight = 'normal';
+});
+
+document.getElementById('show-register').addEventListener('click', () => {
+  document.getElementById('login-form').style.display = 'none';
+  document.getElementById('register-form').style.display = 'block';
+  document.getElementById('show-login').style.fontWeight = 'normal';
+  document.getElementById('show-register').style.fontWeight = 'bold';
+});
+
+// Funzione per controllare lo stato dell'utente all'avvio della pagina
+function checkAuth() {
+  const token = localStorage.getItem('token');
+  if (token) {
+    // Se c'è un token, recuperiamo i dati dell'utente per sicurezza
+    apiRequest(host + "/me", "GET", {})
+      .then(user => {
+        userInfo.innerText = "Utente: " + user.name;
+        authSection.style.display = 'none';
+        userSection.style.display = 'block';
+        appContent.style.display = 'block'; // Mostra l'applicazione originale
+        loadLists(); // Carica subito le liste dell'utente loggato
+      })
+      .catch(() => {
+        // Se il token è scaduto o non valido, ripulisci ed esci
+        logoutLocal();
+      });
+  } else {
+    authSection.style.display = 'block';
+    userSection.style.display = 'none';
+    appContent.style.display = 'none';
+  }
+}
+
+// Azione di Login
+document.getElementById('btn-login').addEventListener('click', () => {
+  const emailInput = document.getElementById('login-email').value;
+  const passwordInput = document.getElementById('login-password').value;
+
+  apiRequest(host + "/login", "POST", { email: emailInput, password: passwordInput })
+    .then(data => {
+      if (data.token) {
+        localStorage.setItem('token', data.token); // Salva il token nel browser
+        checkAuth(); // Aggiorna l'interfaccia
+      }
+    })
+    .catch(err => alert("Credenziali errate o errore di connessione"));
+});
+
+// Azione di Registrazione
+document.getElementById('btn-register').addEventListener('click', () => {
+  const nameInput = document.getElementById('register-name').value;
+  const emailInput = document.getElementById('register-email').value;
+  const passwordInput = document.getElementById('register-password').value;
+
+  apiRequest(host + "/register", "POST", { name: nameInput, email: emailInput, password: passwordInput })
+    .then(data => {
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        checkAuth();
+      }
+    })
+    .catch(err => alert("Errore durante la registrazione"));
+});
+
+// Azione di Logout
+document.getElementById('btn-logout').addEventListener('click', () => {
+  apiRequest(host + "/logout", "POST", {})
+    .then(() => {
+      logoutLocal();
+    })
+    .catch(() => {
+      // Se il server dà errore, facciamo comunque il logout locale per non bloccarsi
+      logoutLocal();
+    });
+});
+
+// Svuota i dati locali e torna alla schermata di login
+function logoutLocal() {
+  localStorage.removeItem('token');
+  getListsResult.innerHTML = "";
+  document.getElementById("tasks-container").innerHTML = "";
+  selectedListId = null;
+  checkAuth();
+}
+
+// Avvia il controllo iniziale non appena si apre la pagina
+checkAuth();
+
+
 // Funzione Carica Liste
 function loadLists() {
   apiRequest(host + "/todolists", 'GET', {})

@@ -8,17 +8,11 @@ use Illuminate\Http\Request;
 
 class TodolistController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        return Todolist::all();
+        return response()->json($request->user()->todolists);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -30,40 +24,36 @@ class TodolistController extends Controller
         return response()->json($todolist, 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Todolist $todolist)
+    public function show(Request $request, Todolist $todolist)
     {
-        return $todolist->load(['items']);
+        abort_if($todolist->user_id !== $request->user()->id, 403, 'Unauthorized');
+        return response()->json($todolist->load(['items']));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Todolist $todolist)
     {
+        abort_if($todolist->user_id !== $request->user()->id, 403, 'Unauthorized');
+
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string'],
             'description' => ['nullable', 'string']
         ]);
 
         $todolist->update($validated);
-
         return response()->json($todolist);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Todolist $todolist)
+    public function destroy(Request $request, Todolist $todolist)
     {
+        abort_if($todolist->user_id !== $request->user()->id, 403, 'Unauthorized');
+        
         $todolist->delete();
         return response()->json(null, 204);
     }
 
-    public function items(Todolist $todolist)
+    public function items(Request $request, Todolist $todolist)
     {
-        return $todolist->items;
+        abort_if($todolist->user_id !== $request->user()->id, 403, 'Unauthorized');
+        return response()->json($todolist->items);
     }
 }

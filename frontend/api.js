@@ -1,8 +1,13 @@
 async function apiRequest(url, method = 'GET', data = null, headers = {}) {
+  // RECUPERA IL TOKEN: Prende il token salvato nel browser durante il login
+  const token = localStorage.getItem('token');
+
   const options = {
     method,
     headers: {
       'Content-Type': 'application/json',
+      // SE IL TOKEN ESISTE: Lo aggiunge in automatico all'header della richiesta HTTP
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...headers
     }
   };

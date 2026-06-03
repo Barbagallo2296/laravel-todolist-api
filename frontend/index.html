@@ -13,35 +13,64 @@
   <div class="container">
 
     <header>
+      <div id="user-section" style="display: none; margin-top: 10px;">
+        <span id="user-info" style="font-weight: 500;"></span>
+        <button id="btn-logout" style="margin-left: 10px; cursor: pointer;">Esci</button>
+      </div>
       <h1><img src="./css/hat.png" alt="cappello di paglia" width="100px"> TODO List</h1>
     </header>
 
     <main>
 
-      <!-- CREA LISTA -->
-      <section class="liste">
-        <h2>Crea una nuova lista</h2>
-        <input type="text" id="list-id" placeholder="Titolo">
-        <input type="text" id="description-input" placeholder="Descrizione">
-        <span id="create-list" class="icon2">➕</span>
+            <!-- Accedere e Registrati -->
+      <section id="auth-section" class="liste">
+        <div style="margin-bottom: 15px;">
+          <button id="show-login" style="font-weight: bold; cursor: pointer; padding: 5px 10px;">Accedi</button>
+          <button id="show-register" style="cursor: pointer; padding: 5px 10px;">Registrati</button>
+        </div>
+
+        <div id="login-form">
+          <h2>Accedi</h2>
+          <input type="email" id="login-email" placeholder="Email">
+          <input type="password" id="login-password" placeholder="Password">
+          <button id="btn-login" style="display: block; margin-top: 10px; cursor: pointer;">Entra</button>
+        </div>
+
+        <div id="register-form" style="display: none;">
+          <h2>Registrati</h2>
+          <input type="text" id="register-name" placeholder="Nome">
+          <input type="email" id="register-email" placeholder="Email">
+          <input type="password" id="register-password" placeholder="Password">
+          <button id="btn-register" style="display: block; margin-top: 10px; cursor: pointer;">Crea Account</button>
+        </div>
       </section>
 
-      <!-- LISTE -->
-      <section class="liste">
-        <h2>Liste</h2>
-        <button id="get-lists">Mostra Liste</button>
-        <div id="get-lists-result"></div>
-      </section>
+      <div id="app-content" style="display: none;">
 
-      <!-- TASKS -->
-      <section class="liste">
-        <h2>Tasks</h2>
-        <input id="task-input" placeholder="Nuova task">
-        <span id="add-task" class="icon2">➕</span>
-        <div id="tasks-container"></div>
-      </section>
+              <!-- CREA LISTA -->
+        <section class="liste">
+          <h2>Crea una nuova lista</h2>
+          <input type="text" id="list-id" placeholder="Titolo">
+          <input type="text" id="description-input" placeholder="Descrizione">
+          <span id="create-list" class="icon2">➕</span>
+        </section>
 
-    </main>
+              <!-- LISTE -->
+        <section class="liste">
+          <h2>Liste</h2>
+          <button id="get-lists">Mostra Liste</button>
+          <div id="get-lists-result"></div>
+        </section>
+
+              <!-- TASKS -->
+        <section class="liste">
+          <h2>Tasks</h2>
+          <input id="task-input" placeholder="Nuova task">
+          <span id="add-task" class="icon2">➕</span>
+          <div id="tasks-container"></div>
+        </section>
+
+      </div> </main>
 
   </div>
 
@@ -51,3 +80,5 @@
 </body>
 
 </html>
+
+
