@@ -26,9 +26,8 @@ class TodolistController extends Controller
             'description' => ['nullable', 'string'],
         ]);
 
-        $todolist = Todolist::create($validated);
-
-        return response()->json($todolist,201);
+        $todolist = $request->user()->todolists()->create($validated);
+        return response()->json($todolist, 201);
     }
 
     /**
@@ -60,10 +59,11 @@ class TodolistController extends Controller
     public function destroy(Todolist $todolist)
     {
         $todolist->delete();
-        return response()->json(null,204);
+        return response()->json(null, 204);
     }
 
-    public function items(Todolist $todolist) {
-    return $todolist->items;
-}
+    public function items(Todolist $todolist)
+    {
+        return $todolist->items;
+    }
 }
