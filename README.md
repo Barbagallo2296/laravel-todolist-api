@@ -30,6 +30,8 @@ Questo progetto è una riscrittura della mia precedente [Todo List in Node.js](h
 - ✅ Migration del database
 - ✅ Route Model Binding
 - ✅ Cascade delete (eliminando una lista si eliminano i suoi task)
+- ✅ **Isolamento dei dati per utente** (ogni utente vede e gestisce solo le proprie liste e task)
+- ✅ **Sessione persistente nel frontend** tramite `localStorage` (il Bearer Token viene salvato e riutilizzato tra le sessioni)
 - ✅ Frontend HTML/JS con gestione token e autenticazione
 
 ---
@@ -37,10 +39,19 @@ Questo progetto è una riscrittura della mia precedente [Todo List in Node.js](h
 ## 🗄️ Schema del Database
 
 ```
+users
+├── id (PK)
+├── name
+├── email (unique)
+├── password
+├── created_at
+└── updated_at
+
 todolists
 ├── id (PK)
 ├── name (obbligatorio)
 ├── description (opzionale)
+├── user_id (FK → users.id)
 ├── created_at
 └── updated_at
 
@@ -71,16 +82,16 @@ items
 | GET | `/api/me` | Dati utente autenticato |
 | POST | `/api/logout` | Logout e invalidazione token |
 
-### Liste (protette)
+### Liste (protette — filtrate per utente autenticato)
 
 | Metodo | Endpoint | Descrizione |
 |--------|----------|-------------|
-| GET | `/api/todolists` | Lista tutte le liste |
-| POST | `/api/todolists` | Crea una lista |
-| GET | `/api/todolists/{id}` | Mostra una lista con i suoi task |
-| PUT | `/api/todolists/{id}` | Aggiorna una lista |
-| DELETE | `/api/todolists/{id}` | Elimina una lista (cascade) |
-| GET | `/api/todolists/{id}/items` | Task di una lista specifica |
+| GET | `/api/todolists` | Restituisce solo le liste dell'utente autenticato |
+| POST | `/api/todolists` | Crea una lista associata all'utente autenticato |
+| GET | `/api/todolists/{id}` | Mostra una lista (solo se appartiene all'utente) con i suoi task |
+| PUT | `/api/todolists/{id}` | Aggiorna una lista (solo se appartiene all'utente) |
+| DELETE | `/api/todolists/{id}` | Elimina una lista (cascade, solo se appartiene all'utente) |
+| GET | `/api/todolists/{id}/items` | Task di una lista specifica (solo se appartiene all'utente) |
 
 ### Task (protette)
 
@@ -159,6 +170,7 @@ Questo progetto è una riscrittura di [todo-list-app](https://github.com/Barbaga
 | ORM | Nessuno (SQL puro) | Eloquent |
 | Validazione | Manuale | Integrata |
 | Autenticazione | Nessuna | Sanctum |
+| Isolamento dati | Nessuno | Per utente (user_id) |
 | Ambiente | Nativo | Docker |
 
 ---
