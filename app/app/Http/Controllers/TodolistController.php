@@ -43,13 +43,17 @@ class TodolistController extends Controller
         return response()->json($todolist);
     }
 
-    public function destroy(Request $request, Todolist $todolist)
-    {
-        abort_if($todolist->user_id !== $request->user()->id, 403, 'Unauthorized');
-        
-        $todolist->delete();
-        return response()->json(null, 204);
-    }
+  public function destroy(Request $request, Todolist $todolist)
+{
+    abort_if($todolist->user_id !== $request->user()->id, 403, 'Unauthorized');
+    
+    $todolist->delete();
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'Lista eliminata con successo'
+    ], 200);
+}
 
     public function items(Request $request, Todolist $todolist)
     {

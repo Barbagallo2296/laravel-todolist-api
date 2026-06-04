@@ -57,9 +57,15 @@ class ItemController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Item $item)
+  public function destroy(Request $request, Item $item)
     {
+        abort_if($item->todolist->user_id !== $request->user()->id, 403, 'Unauthorized');
+
         $item->delete();
-        return response(null,204);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Task eliminato con successo'
+        ], 200);
     }
 }

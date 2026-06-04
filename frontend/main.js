@@ -30,17 +30,15 @@ document.getElementById('show-register').addEventListener('click', () => {
 function checkAuth() {
   const token = localStorage.getItem('token');
   if (token) {
-    // Se c'è un token, recuperiamo i dati dell'utente per sicurezza
     apiRequest(host + "/me", "GET", {})
       .then(user => {
         userInfo.innerText = "Utente: " + user.name;
         authSection.style.display = 'none';
         userSection.style.display = 'block';
-        appContent.style.display = 'block'; // Mostra l'applicazione originale
-        loadLists(); // Carica subito le liste dell'utente loggato
+        appContent.style.display = 'block';
+        loadLists(); // Carica subito le liste in stile Keep
       })
       .catch(() => {
-        // Se il token è scaduto o non valido, ripulisci ed esci
         logoutLocal();
       });
   } else {
@@ -58,8 +56,8 @@ document.getElementById('btn-login').addEventListener('click', () => {
   apiRequest(host + "/login", "POST", { email: emailInput, password: passwordInput })
     .then(data => {
       if (data.token) {
-        localStorage.setItem('token', data.token); // Salva il token nel browser
-        checkAuth(); // Aggiorna l'interfaccia
+        localStorage.setItem('token', data.token);
+        checkAuth();
       }
     })
     .catch(err => alert("Credenziali errate o errore di connessione"));
@@ -84,16 +82,10 @@ document.getElementById('btn-register').addEventListener('click', () => {
 // Azione di Logout
 document.getElementById('btn-logout').addEventListener('click', () => {
   apiRequest(host + "/logout", "POST", {})
-    .then(() => {
-      logoutLocal();
-    })
-    .catch(() => {
-      // Se il server dà errore, facciamo comunque il logout locale per non bloccarsi
-      logoutLocal();
-    });
+    .then(() => { logoutLocal(); })
+    .catch(() => { logoutLocal(); });
 });
 
-// Svuota i dati locali e torna alla schermata di login
 function logoutLocal() {
   localStorage.removeItem('token');
   getListsResult.innerHTML = "";
@@ -102,85 +94,90 @@ function logoutLocal() {
   checkAuth();
 }
 
-// Avvia il controllo iniziale non appena si apre la pagina
 checkAuth();
 
+// Genera e inserisce la singola Card nell'interfaccia (Stile Google Keep)
+function appendSingleCard(list) {
+  const card = document.createElement("div");
+  card.className = "keep-card";
+  card.dataset.id = list.id;
 
-// Funzione Carica Liste
+  // Contenuto testuale della card
+  const cardBody = document.createElement("div");
+  cardBody.className = "card-body";
+  cardBody.innerHTML = `
+    <h3 class="card-title">${list.name}</h3>
+    <p class="card-desc">${list.description || ''}</p>
+  `;
+  card.appendChild(cardBody);
+
+  // Contenitore per le azioni
+  const cardActions = document.createElement("div");
+  cardActions.className = "card-actions";
+
+  // Vedi Tasks (📋)
+  const viewBtn = document.createElement("span");
+  viewBtn.innerHTML = "📋";
+  viewBtn.className = "icon view-btn";
+  viewBtn.addEventListener("click", () => {
+    selectedListId = list.id;
+    loadItems();
+  });
+
+  // Modifica Lista (✏️)
+  const updateBtn = document.createElement("span");
+  updateBtn.innerHTML = "✏️";
+  updateBtn.className = "icon update-btn";
+  updateBtn.addEventListener("click", () => {
+    const newName = prompt("Modifica titolo della lista:", list.name);
+    const newDesc = prompt("Modifica descrizione della lista:", list.description);
+    if (newName) {
+      apiRequest(host + "/todolists/" + list.id, "PUT", {
+        name: newName,
+        description: newDesc
+      }).then(loadLists);
+    }
+  });
+
+  // Elimina Lista (❌)
+  const deleteBtn = document.createElement("span");
+  deleteBtn.innerHTML = "❌";
+  deleteBtn.className = "icon delete-btn";
+  deleteBtn.addEventListener("click", () => {
+    card.remove(); // Rimuove subito l'elemento visivo dallo schermo
+
+    if (selectedListId === list.id) {
+      document.getElementById("tasks-container").innerHTML = "";
+      selectedListId = null;
+    }
+
+    apiRequest(host + "/todolists/" + list.id, "DELETE", {})
+      .catch(err => {
+        alert("Impossibile eliminare la lista");
+        loadLists();
+      });
+  });
+
+  cardActions.appendChild(viewBtn);
+  cardActions.appendChild(updateBtn);
+  cardActions.appendChild(deleteBtn);
+  card.appendChild(cardActions);
+
+  getListsResult.appendChild(card);
+}
+
+// Funzione Carica Tutte le Liste
 function loadLists() {
   apiRequest(host + "/todolists", 'GET', {})
     .then(data => {
-      getListsResult.innerHTML = "";
-      const table = document.createElement("table");
-      const headerRow = document.createElement("tr");
-      headerRow.innerHTML = "<th>Titolo</th><th>Descrizione</th><th>Azioni</th>";
-      table.appendChild(headerRow);
-
+      getListsResult.innerHTML = ""; // Svuota il contenitore
       for (const list of data) {
-        const tr = document.createElement("tr");
-        tr.className = "trlist";
-        const td1 = document.createElement("td");
-        td1.innerHTML = list.name;
-        tr.appendChild(td1);
-        const td2 = document.createElement("td");
-        td2.innerHTML = list.description;
-        tr.appendChild(td2);
-        const tdActions = document.createElement("td");
-
-        // Elimina Lista
-        const deleteBtn = document.createElement("text");
-        deleteBtn.innerHTML = "❌";
-        deleteBtn.classList.add("delete-Btn", "icon");
-        deleteBtn.addEventListener("click", () => {
-          apiRequest(host + "/todolists/" + list.id, "DELETE", {})
-            .then(loadLists);
-        });
-
-        // Aggiorna Lista
-        const updateBtn = document.createElement("text");
-        updateBtn.innerHTML = "✏️";
-        updateBtn.classList.add("update-Btn", "icon");
-        updateBtn.addEventListener("click", () => {
-          const nameInput = document.createElement("input");
-          nameInput.value = list.name;
-          const descInput = document.createElement("input");
-          descInput.value = list.description;
-          td1.innerHTML = "";
-          td2.innerHTML = "";
-          td1.appendChild(nameInput);
-          td2.appendChild(descInput);
-          const saveBtn = document.createElement("button");
-          saveBtn.innerText = "Salva";
-          saveBtn.className = "save-Btn"
-          saveBtn.addEventListener("click", () => {
-            apiRequest(host + "/todolists/" + list.id, "PUT", {
-              name: nameInput.value,
-              description: descInput.value
-            }).then(loadLists);
-          });
-          tdActions.innerHTML = "";
-          tdActions.appendChild(saveBtn);
-        });
-
-        // VEDI TASKS
-        const viewBtn = document.createElement("text");
-        viewBtn.innerHTML = "📋";
-        viewBtn.classList.add("view-Btn", "icon");
-        viewBtn.addEventListener("click", () => {
-          selectedListId = list.id;
-          loadItems();
-        });
-        tdActions.appendChild(viewBtn);
-        tdActions.appendChild(updateBtn);
-        tdActions.appendChild(deleteBtn);
-        tr.appendChild(tdActions);
-        table.appendChild(tr);
+        appendSingleCard(list);
       }
-      getListsResult.appendChild(table);
     });
 }
 
-// LISTE 
+// Bottone Mostra/Nascondi Liste
 getListsButton.addEventListener('click', () => {
   if (getListsResult.innerHTML !== "") {
     getListsResult.innerHTML = "";
@@ -189,22 +186,103 @@ getListsButton.addEventListener('click', () => {
   loadLists();
 });
 
-
-// Crea una nuova lista
+// Crea una nuova lista (Ottimizzazione: Istantanea senza ricaricare tutto)
 const addNewList = document.getElementById('create-list');
 const listInput = document.getElementById('list-id');
 const descriptionInput = document.getElementById("description-input");
+
 addNewList.addEventListener('click', () => {
-  apiRequest(host + "/todolists", "POST", {
-    name: listInput.value,
-    description: descriptionInput.value
-  })
-    .then(() => {
-      listInput.value = "";
-      descriptionInput.value = "";
+  const nameVal = listInput.value;
+  const descVal = descriptionInput.value;
+
+  if (!nameVal.trim()) {
+    alert("Inserisci almeno un titolo per la lista!");
+    return;
+  }
+
+  // Svuota subito i campi di input nel browser
+  listInput.value = "";
+  descriptionInput.value = "";
+
+  // Invia al server ed esegui il rendering istantaneo del risultato
+  apiRequest(host + "/todolists", "POST", { name: nameVal, description: descVal })
+    .then(newList => {
+      appendSingleCard(newList); // Appende solo la nuova card senza fare una GET totale
+    })
+    .catch(err => {
+      alert("Errore durante la creazione");
       loadLists();
     });
 });
+
+// Funzione helper per appendere un singolo task alla tabella istantaneamente
+function appendSingleRow(item, table) {
+  const tr = document.createElement("tr");
+  tr.classList.add("trlist");
+  
+  const td1 = document.createElement("td");
+  td1.innerText = item.name;
+  tr.appendChild(td1);
+  
+  const td2 = document.createElement("td");
+  td2.innerText = item.stato;
+  td2.className = item.stato;
+  tr.appendChild(td2);
+  
+  const tdActions = document.createElement("td");
+
+  // Cambia Stato (✔)
+  const toggleBtn = document.createElement("text");
+  toggleBtn.innerText = "✔";
+  toggleBtn.classList.add("toggle-Btn", "icon");
+  toggleBtn.addEventListener("click", () => {
+    apiRequest(host + "/items/" + item.id, "PUT", {
+      name: item.name,
+      stato: item.stato === "Todo" ? "Done" : "Todo"
+    }).then(loadItems);
+  });
+
+  // Modifica Tasks (✏️)
+  const editBtn = document.createElement("text");
+  editBtn.innerText = "✏️";
+  editBtn.classList.add("edit-Btn", "icon");
+  editBtn.addEventListener("click", () => {
+    const input = document.createElement("input");
+    input.value = item.name;
+    td1.innerHTML = "";
+    td1.appendChild(input);
+    const saveBtn = document.createElement("button");
+    saveBtn.innerText = "Salva";
+    saveBtn.className = "save-Btn";
+    saveBtn.addEventListener("click", () => {
+      apiRequest(host + "/items/" + item.id, "PUT", {
+        name: input.value,
+        stato: item.stato
+      }).then(loadItems);
+    });
+    tdActions.innerHTML = "";
+    tdActions.appendChild(saveBtn);
+  });
+
+  // Elimina Tasks (❌)
+  const deleteBtn = document.createElement("text");
+  deleteBtn.innerText = "❌";
+  deleteBtn.classList.add("delete-Btn", "icon");
+  deleteBtn.addEventListener("click", () => {
+    tr.remove(); // Rimuove istantaneamente il task dallo schermo visivo
+    apiRequest(host + "/items/" + item.id, "DELETE", {})
+      .catch(err => {
+        alert("Impossibile eliminare il task");
+        loadItems();
+      });
+  });
+
+  tdActions.appendChild(toggleBtn);
+  tdActions.appendChild(editBtn);
+  tdActions.appendChild(deleteBtn);
+  tr.appendChild(tdActions);
+  table.appendChild(tr);
+}
 
 // Funzione Carica Tasks
 function loadItems() {
@@ -218,84 +296,51 @@ function loadItems() {
       table.appendChild(header);
 
       for (const item of data) {
-        const tr = document.createElement("tr");
-        tr.classList.add("trlist");
-        const td1 = document.createElement("td");
-        td1.innerText = item.name;
-        tr.appendChild(td1);
-        const td2 = document.createElement("td");
-        td2.innerText = item.stato;
-        td2.className = item.stato;
-        tr.appendChild(td2);
-        const tdActions = document.createElement("td");
-
-        // Cambia Stato
-        const toggleBtn = document.createElement("text");
-        toggleBtn.innerText = "✔";
-        toggleBtn.classList.add("toggle-Btn", "icon");
-        toggleBtn.addEventListener("click", () => {
-          apiRequest(host + "/items/" + item.id, "PUT", {
-            name: item.name,
-            stato: item.stato === "Todo" ? "Done" : "Todo"
-          }).then(loadItems);
-        });
-
-        // Modifica Tasks
-        const editBtn = document.createElement("text");
-        editBtn.innerText = "✏️";
-        editBtn.classList.add("edit-Btn", "icon");
-        editBtn.addEventListener("click", () => {
-          const input = document.createElement("input");
-          input.value = item.name;
-          td1.innerHTML = "";
-          td1.appendChild(input);
-          const saveBtn = document.createElement("button");
-          saveBtn.innerText = "Salva";
-          saveBtn.className = "save-Btn"
-          saveBtn.addEventListener("click", () => {
-            apiRequest(host + "/items/" + item.id, "PUT", {
-              name: input.value,
-              stato: item.stato
-            }).then(loadItems);
-          });
-          tdActions.innerHTML = "";
-          tdActions.appendChild(saveBtn);
-        });
-
-        // Elimina Tasks
-        const deleteBtn = document.createElement("text");
-        deleteBtn.innerText = "❌";
-        deleteBtn.classList.add("delete-Btn", "icon");
-        deleteBtn.addEventListener("click", () => {
-          apiRequest(host + "/items/" + item.id, "DELETE", {})
-            .then(loadItems);
-        });
-        tdActions.appendChild(toggleBtn);
-        tdActions.appendChild(editBtn);
-        tdActions.appendChild(deleteBtn);
-        tr.appendChild(tdActions);
-        table.appendChild(tr);
+        appendSingleRow(item, table);
       }
       container.appendChild(table);
     });
-
 }
 
-// Crea una nuova tasks
+// Crea una nuova task (Ottimizzata e Istantanea)
 const addTaskButton = document.getElementById("add-task");
 const taskInput = document.getElementById("task-input");
+
 addTaskButton.addEventListener("click", () => {
   if (!selectedListId) {
     alert("Seleziona prima una lista");
     return;
   }
+
+  const taskVal = taskInput.value;
+
+  if (!taskVal.trim()) {
+    alert("Il testo del task non può essere vuoto!");
+    return;
+  }
+
+  // Svuota subito l'input nel browser per dare massima reattività
+  taskInput.value = "";
+
+  // Invia la richiesta POST in background
   apiRequest(host + "/items", "POST", {
-    name: taskInput.value,
+    name: taskVal,
     list_id: selectedListId,
     stato: "Todo"
   })
-    .then(() => {
-      taskInput.value = "";
+    .then(newItem => {
+      const table = document.querySelector("#tasks-container table");
+      
+      if (table) {
+        // Se la tabella è già presente, aggiungiamo direttamente la riga al volo
+        appendSingleRow(newItem, table);
+      } else {
+        // Se la tabella era vuota (primo task), ricostruiamo la struttura
+        loadItems();
+      }
+    })
+    .catch(err => {
+      alert("Errore durante la creazione del task");
       loadItems();
     });
 });
