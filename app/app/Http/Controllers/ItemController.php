@@ -9,11 +9,13 @@ use Illuminate\Http\Request;
 class ItemController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource (solo i task dell'utente autenticato).
      */
-    public function index()
+    public function index(Request $request)
     {
-        return Item::all();
+        return Item::whereHas('todolist', function ($query) use ($request) {
+            $query->where('user_id', $request->user()->id);
+        })->get();
     }
 
     /**
@@ -23,19 +25,24 @@ class ItemController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'stato' =>['required', 'string'],
+            'stato' => ['required', 'string'],
             'list_id' => ['required', 'exists:todolists,id'],
         ]);
 
-    $item = Item::create($validated);
-    return response()->json($item,201);
+        $todolist = Todolist::findOrFail($validated['list_id']);
+        abort_if($todolist->user_id !== $request->user()->id, 403, 'Unauthorized');
+
+        $item = Item::create($validated);
+        return response()->json($item, 201);
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Item $item)
+    public function show(Request $request, Item $item)
     {
+        abort_if($item->todolist->user_id !== $request->user()->id, 403, 'Unauthorized');
+
         return $item->load('todolist');
     }
 
@@ -44,22 +51,29 @@ class ItemController extends Controller
      */
     public function update(Request $request, Item $item)
     {
+        abort_if($item->todolist->user_id !== $request->user()->id, 403, 'Unauthorized');
+
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'stato' =>['sometimes', 'required', 'string'],
+            'stato' => ['sometimes', 'required', 'string'],
             'list_id' => ['sometimes', 'required', 'exists:todolists,id'],
         ]);
+
+        if (isset($validated['list_id'])) {
+            $newTodolist = Todolist::findOrFail($validated['list_id']);
+            abort_if($newTodolist->user_id !== $request->user()->id, 403, 'Unauthorized');
+        }
+
         $item->update($validated);
         return response()->json($item);
-
     }
 
     /**
      * Remove the specified resource from storage.
      */
-  public function destroy(Request $request, Item $item)
+    public function destroy(Request $request, Item $item)
     {
-        abort_if($item->todolist->user_id !== $request->user()->id, 403, 'Unauthorized');
+        abort_if(!$item->todolist || $item->todolist->user_id !== $request->user()->id, 403, 'Unauthorized');
 
         $item->delete();
         
