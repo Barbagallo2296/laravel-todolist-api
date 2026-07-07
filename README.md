@@ -97,11 +97,13 @@ items
 
 | Metodo | Endpoint | Descrizione |
 |--------|----------|-------------|
-| GET | `/api/items` | Lista tutti i task |
+| GET | `/api/items` | Lista tutti i task dell'utente autenticato |
 | POST | `/api/items` | Crea un task |
 | GET | `/api/items/{id}` | Mostra un task |
 | PUT | `/api/items/{id}` | Aggiorna un task (testo o stato) |
 | DELETE | `/api/items/{id}` | Elimina un task |
+
+Tutte le route protette richiedono l'header `Authorization: Bearer {token}`.
 
 ---
 
@@ -123,17 +125,75 @@ cd laravel-todolist-api
 cp app/.env.example app/.env
 
 # 3. Avvia i container
-docker compose up
+docker compose up -d
 
-# 4. Esegui le migration
+# 4. Genera la chiave dell'applicazione
+docker compose exec app php artisan key:generate
+
+# 5. Esegui le migration
 docker compose exec app php artisan migrate
 ```
+
+Il file `.env.example` contiene già i valori corretti per il setup Docker incluso in questo repo (MySQL su host `db`, database `laravel`, utente `laravel`) — non serve modificarlo per l'avvio standard.
 
 ### Accesso
 
 - **API**: http://localhost:8000/api
-- **Frontend**: apri `frontend/index.html` nel browser
+- **Frontend**: apri `frontend/index.html` — meglio con un server locale (es. estensione **Live Server** di VS Code) piuttosto che con doppio click diretto, per evitare problemi di CORS
 - **PHPMyAdmin**: http://localhost:8080
+
+---
+
+## 🪟 Setup su Windows (WSL2 consigliato)
+
+Docker Desktop su Windows funziona, ma se tieni il progetto su un percorso Windows classico (`C:\Users\...`) le richieste API possono diventare **molto lente** — comandi che dovrebbero girare in pochi millisecondi possono impiegare 3-4 secondi, e con più richieste in coda si arriva anche a 20-30 secondi. La causa è l'overhead del filesystem quando Docker (che sotto usa un motore Linux) deve leggere file che stanno fisicamente su NTFS.
+
+**Soluzione: sposta il progetto dentro WSL2**
+
+1. Installa Ubuntu su WSL2 (da PowerShell):
+   ```powershell
+   wsl --install -d Ubuntu
+   ```
+   Riavvia se richiesto, poi crea utente e password Linux al primo avvio.
+
+2. In Docker Desktop vai su **Settings → Resources → WSL Integration**, attiva il toggle per Ubuntu, poi **Apply & Restart**.
+
+3. Apri il terminale Ubuntu e clona il progetto **dentro il filesystem Linux** (non su `/mnt/c/...`):
+   ```bash
+   cd ~
+   git clone https://github.com/Barbagallo2296/laravel-todolist-api.git
+   ```
+
+4. Se `docker` dà errore di permessi (`permission denied ... docker.sock`):
+   ```bash
+   sudo usermod -aG docker $USER
+   ```
+   poi da PowerShell `wsl --shutdown` e riapri il terminale Ubuntu.
+
+5. Prosegui con i normali comandi di avvio (`.env`, `docker compose up -d`, `key:generate`, `migrate`).
+
+6. (Facoltativo) Apri il progetto in VS Code direttamente da Ubuntu per lavorare sui file nativamente:
+   ```bash
+   code .
+   ```
+
+Con questo setup si passa da 3-4 secondi a circa **200ms** per le stesse operazioni.
+
+---
+
+## 🛠️ Troubleshooting
+
+**L'app è lentissima / le richieste impiegano diversi secondi**
+Problema di filesystem su Windows: sposta il progetto dentro WSL2 (vedi sezione sopra).
+
+**`permission denied` connettendosi a Docker dentro WSL2**
+```bash
+sudo usermod -aG docker $USER
+wsl --shutdown   # da PowerShell, poi riapri il terminale Ubuntu
+```
+
+**Conflitto di porta 3306 (MySQL) all'avvio dei container**
+Probabilmente hai un servizio MySQL locale già in ascolto su quella porta (es. XAMPP). Fermalo, oppure cambia il mapping nel `docker-compose.yml` (es. `"3307:3306"`) — non serve modificare `DB_HOST`/`DB_PORT` nel `.env`, perché i container comunicano tra loro internamente sulla rete Docker.
 
 ---
 
@@ -155,23 +215,6 @@ laravel-todolist-api/
 │   └── css/
 └── docker-compose.yml            # Configurazione Docker
 ```
-
----
-
-## 🔄 Da Node.js a Laravel
-
-Questo progetto è una riscrittura di [todo-list-app](https://github.com/Barbagallo2296/todo-list-app) (Node.js + Express + SQLite).
-
-| | Versione Node.js | Versione Laravel |
-|-|-----------------|-----------------|
-| Linguaggio | JavaScript | PHP |
-| Framework | Express | Laravel 13 |
-| Database | SQLite | MySQL 8 |
-| ORM | Nessuno (SQL puro) | Eloquent |
-| Validazione | Manuale | Integrata |
-| Autenticazione | Nessuna | Sanctum |
-| Isolamento dati | Nessuno | Per utente (user_id) |
-| Ambiente | Nativo | Docker |
 
 ---
 
